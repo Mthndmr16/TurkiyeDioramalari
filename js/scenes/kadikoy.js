@@ -93,7 +93,7 @@ export default {
   sky: 'linear-gradient(180deg,#8ec8ee 0%,#cfe7f4 50%,#f6e2ea 100%)', fog: ['#e8eef4', 60, 130],
   shots: [
     { a: [24, 44], e: [30, 25], r: [40, 34], t: [[1, .5, -1.5]], d: 8.5 },
-    { a: [168, 184], e: [17, 21], r: [7.6, 7.0], t: [[5.5, 1.8, 3.0]], d: 7.5 },
+    { a: [168, 184], e: [26, 30], r: [8.0, 7.4], t: [[5.5, 1.6, 3.0]], d: 7.5 },
     { a: [-24, -4], e: [7, 11], r: [12.5, 11], t: [[-4, 1, -1.8], [-1, 1.1, -3.4]], d: 7.5 },
     { a: [-40, -62], e: [42, 36], r: [31, 30], t: [[0, 0, -2]], d: 7 },
   ],
@@ -211,7 +211,7 @@ export default {
     const boat = group(g); { box(boat, 2.6, .35, .9, '#f4f1ea', 0, -.25, 0); box(boat, 1.6, .45, .8, '#f4f1ea', -.2, .1, 0); box(boat, 1.5, .18, .82, N('#2b3d5c'), -.2, .3, 0); box(boat, 2.62, .06, .92, '#e86a2a', 0, -.1, 0); cone(boat, .45, .9, '#f4f1ea', 1.3, -.25, 0, 4).rotation.z = -Math.PI / 2; boat.userData.L = 2.6; }
     new Lane(S, { z: 10.2, x0: -14, x1: 14, dir: -1, speed: 1.3, y: -.15, fade: 1.6 }).add(boat, .3);
     gulls(S, g, 7, 5.5, 4.5, 6, 2.5, 6.5); gulls(S, g, 5, -6, 3.5, 4.5, 2, 4);
-    pigeons(S, g, 14, 6, -.6, 2.2, 1.4, 3.5, 24);
+    pigeons(S, g, 14, 4.6, -.4, 2.0, 1.2, 2.8, 24);
     // ---- tram & road traffic (one lane, cars queue at the lights)
     const tr = tram(S, g, { dest: 'MODA' }); tr.position.set(-4, .03, -3.25);
     S.updates.push((t) => { const c = t % 30; let x; if (c < 6) x = -4; else if (c < 15) x = lerp(-4, 16.5, ease((c - 6) / 9)); else if (c < 16) x = 16.5; else if (c < 22) x = lerp(-16.5, -4, ease((c - 16) / 6)); else x = -4; tr.position.x = x; tr.visible = Math.abs(x) < 15.6; const s = 1 - smooth(13.4, 15.4, Math.abs(x)); tr.scale.setScalar(Math.max(.0001, s)); });
@@ -227,7 +227,7 @@ export default {
     // gull feeders on the quay
     C.add({ x: .3, z: 2.75, ry: 0, mode: MODE.wave, v: 'k' }); C.add({ x: -5.4, z: 2.8, ry: .2, mode: MODE.wave, v: 's' });
     // kids chasing the pigeons
-    for (let i = 0; i < 2; i++) { const pts = []; for (let k = 0; k < 8; k++) { const a = k / 8 * TAU + i * 2; pts.push(V(6 + Math.cos(a) * 1.5, 0, -.6 + Math.sin(a) * 1.2)); } C.add({ v: 'k', path: { pts, loop: true, mode: MODE.run, offset: R(), start: i * 3 }, speed: .95 }); }
+    for (let i = 0; i < 2; i++) { const pts = []; for (let k = 0; k < 8; k++) { const a = k / 8 * TAU + i * 2; pts.push(V(4.6 + Math.cos(a) * 1.3, 0, -.4 + Math.sin(a) * 1.1)); } C.add({ v: 'k', path: { pts, loop: true, mode: MODE.run, offset: R(), start: i * 3 }, speed: .95 }); }
     // tea waiter circling the tables
     C.add({ v: 'w', path: { pts: [V(-5.4, 0, .9), V(-6.7, 0, 2.1), V(-8.4, 0, 2.2), V(-10.0, 0, .8), V(-8.4, 0, -.5), V(-6.7, 0, -.5)], loop: true, mode: MODE.carry, waits: { 1: { t: [2, 4], mode: MODE.browse, face: Math.PI }, 3: { t: [2, 4], mode: MODE.browse, face: -1.2 } } }, speed: .5 });
     // walkers
