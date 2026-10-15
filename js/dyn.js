@@ -59,11 +59,39 @@ export function car(p, { c = '#f2c230', type = 'sedan', night = false } = {}) {
   g.userData.L = L;
   return g;
 }
-/** drive a vehicle back and forth / one way along x on a lane, hiding at the ends */
-export function traffic(S, o, { z, x0 = -14, x1 = 14, speed = 2.5, off = 0, dir = 1, y = 0, fade = 1.2, gap = 0 }) {
-  const span = x1 - x0 + 2 * fade, period = span / speed + gap;
-  S.updates.push((t) => { const u = ((t + off) % period) * speed; const x = dir > 0 ? x0 - fade + u : x1 + fade - u; o.position.set(x, y, z); o.rotation.y = dir > 0 ? 0 : Math.PI; const s = Math.min(smooth(x0 - fade, x0 + .3, x), 1 - smooth(x1 - .3, x1 + fade, x)); o.scale.setScalar(Math.max(s, .0001)); o.visible = s > .01; });
+/** a timed traffic signal: cars get `green` seconds, then pedestrians `walk` seconds (with a short all-red) */
+export function signal(period = 22, green = 14, walk = 6, offset = 0) {
+  const ph = (t) => ((t + offset) % period + period) % period;
+  return { carGo: (t) => ph(t) < green, pedGo: (t) => { const p = ph(t); return p > green + 1 && p < green + 1 + walk; }, phase: ph, period, green, walk };
 }
+/** one traffic lane along x. Vehicles follow each other, keep their distance, and stop at red lights. */
+export class Lane {
+  constructor(S, { z, x0 = -14, x1 = 14, dir = 1, speed = 2.5, y = 0, fade = 1.2, stops = [], onS = null }) {
+    Object.assign(this, { z, x0, x1, dir, speed, y, fade, onS }); this.len = x1 - x0 + 2 * fade; this.vs = [];
+    this.stops = stops.map((st) => ({ s: this.toS(st.x) - .25, red: st.red }));
+    S.updates.push((t, dt) => this.step(t, dt));
+  }
+  toS(x) { return this.dir > 0 ? x - (this.x0 - this.fade) : (this.x1 + this.fade) - x; }
+  toX(s) { return this.dir > 0 ? this.x0 - this.fade + s : this.x1 + this.fade - s; }
+  add(o, sFrac = null, speed = null) { const L = o.userData.L || 2; const v = { o, L, s: (sFrac ?? R()) * this.len, v: this.speed * .8, max: speed ?? this.speed * rr(.92, 1.08) }; this.vs.push(v); this.vs.sort((a, b) => a.s - b.s); o.rotation.y = this.dir > 0 ? 0 : Math.PI; return v; }
+  /** spread n vehicles evenly along the lane */
+  fill(list) { list.forEach((o, i) => this.add(o, (i + .3) / list.length)); return this; }
+  step(t, dt) {
+    const vs = this.vs, n = vs.length, len = this.len;
+    for (let i = 0; i < n; i++) {
+      const v = vs[i]; let target = v.max;
+      if (n > 1) { let best = null, bg = 1e9; for (let j = 0; j < n; j++) { if (j === i) continue; const w = vs[j]; let gap = w.s - v.s; if (gap <= 0) gap += len; gap -= (w.L + v.L) / 2 + .35; if (gap < bg) { bg = gap; best = w; } } if (bg < 1.4) target = Math.min(target, bg < .12 ? 0 : best.v * Math.min(1, bg / 1.4) + Math.max(0, bg - .4) * .4); }
+      for (const st of this.stops) { if (!st.red(t)) continue; const d = st.s - (v.s + v.L / 2); if (d > -.05 && d < 2.6) target = Math.min(target, d < .12 ? 0 : v.max * (d / 2.6)); }
+      v.v += clamp(target - v.v, -dt * 4.5, dt * 1.8); if (v.v < 0) v.v = 0;
+      v.s += v.v * dt; if (v.s >= len) v.s -= len;
+      const x = this.toX(v.s); v.o.position.set(x, this.y, this.z); if (this.onS) this.onS(v.o, v.s, x);
+      const sc = Math.min(smooth(this.x0 - this.fade, this.x0 + .3, x), 1 - smooth(this.x1 - .3, this.x1 + this.fade, x)); v.o.scale.setScalar(Math.max(sc, .0001)); v.o.visible = sc > .01;
+    }
+    vs.sort((a, b) => a.s - b.s);
+  }
+}
+/** single vehicle on its own lane (kept for simple cases) */
+export function traffic(S, o, opts) { const L = new Lane(S, { ...opts, speed: opts.speed || 2.5 }); L.add(o, ((opts.off || 0) % 10) / 10); return L; }
 /** nostalgic tram, length along x. passengers can attach to returned .seats */
 export function tram(S, p, { dest = 'MODA', night = false, c = '#b81f2a', cream = '#efe1c0' } = {}) {
   const g = group(p); const L = 3.6, W = 1.0;

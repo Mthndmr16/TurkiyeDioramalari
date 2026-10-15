@@ -40,7 +40,7 @@ export const cg = (k, f) => { let g = _g.get(k); if (!g) { g = f(); _g.set(k, g)
 export const SPH = new THREE.IcosahedronGeometry(1, 1);
 export const SPH2 = new THREE.SphereGeometry(1, 14, 10);
 export const PLANE = new THREE.PlaneGeometry(1, 1);
-export function mesh(geo, m, p, x = 0, y = 0, z = 0) { const o = new THREE.Mesh(geo, mat(m)); o.position.set(x, y, z); o.castShadow = true; o.receiveShadow = true; p.add(o); return o; }
+export function mesh(geo, m, p, x = 0, y = 0, z = 0) { const o = new THREE.Mesh(geo, mat(m)); o.position.set(x, y, z); o.castShadow = true; o.receiveShadow = true; p.add(o); if (DBG) o.name = dbgName(4); return o; }
 /** box with bottom at y */
 export function box(p, w, h, d, c, x = 0, y = 0, z = 0, ry = 0) { const o = mesh(UB, c, p, x, y + h / 2, z); o.scale.set(w, h, d); if (ry) o.rotation.y = ry; return o; }
 /** box spanning two corners (min/max), y bottom */
@@ -67,7 +67,9 @@ export function archWin(p, w, h, d, c, x, y, z, ry = 0) { const q = new THREE.Gr
 export function lathe(p, prof, c, x, y, z, seg = 14) { const g = new THREE.LatheGeometry(prof.map(([a, b]) => new THREE.Vector2(a, b)), seg); return mesh(g, c, p, x, y, z); }
 export function line(p, pts, color = '#2a2530', op = 1) { const g = new THREE.BufferGeometry().setFromPoints(pts); const m = new THREE.LineBasicMaterial({ color, transparent: op < 1, opacity: op }); const l = new THREE.Line(g, m); p.add(l); return l; }
 export function sag(a, b, s = .4, n = 14) { const pts = []; for (let i = 0; i <= n; i++) { const k = i / n; pts.push(new THREE.Vector3(lerp(a.x, b.x, k), lerp(a.y, b.y, k) - Math.sin(Math.PI * k) * s, lerp(a.z, b.z, k))); } return pts; }
-export function group(p, x = 0, y = 0, z = 0, ry = 0, s = 1) { const g = new THREE.Group(); g.position.set(x, y, z); g.rotation.y = ry; if (s !== 1) g.scale.setScalar(s); p.add(g); return g; }
+export const DBG = typeof location !== 'undefined' && /debug/.test(location.search);
+function dbgName(depth) { try { const l = new Error().stack.split('\n')[depth] || ''; const m = l.match(/at (?:new )?([\w$.]+)/); return m ? m[1] : '?'; } catch (e) { return '?'; } }
+export function group(p, x = 0, y = 0, z = 0, ry = 0, s = 1) { const g = new THREE.Group(); g.position.set(x, y, z); g.rotation.y = ry; if (s !== 1) g.scale.setScalar(s); p.add(g); if (DBG) g.name = dbgName(3); return g; }
 
 /* ---------------- textures */
 export function ctex(w, h, draw) { const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); draw(g, w, h); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t; }

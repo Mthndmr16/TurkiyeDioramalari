@@ -1,4 +1,22 @@
-import { THREE, setSeed, bake, ease, lerp } from './kit.js';
+import { THREE, setSeed, bake, ease, lerp, DBG } from './kit.js';
+/* debug: report pairs of props whose bounding boxes overlap substantially (run with ?debug) */
+function overlapReport(S) {
+  const items = []; const b = new THREE.Box3(), sz = new THREE.Vector3(), c = new THREE.Vector3(), vb = new THREE.Box3();
+  const boxOf = (o) => { b.makeEmpty(); o.updateWorldMatrix(true, true); o.traverse((m) => { if (!m.isMesh || m.isInstancedMesh || !m.geometry) return; if (!m.geometry.boundingBox) m.geometry.computeBoundingBox(); vb.copy(m.geometry.boundingBox).applyMatrix4(m.matrixWorld); b.union(vb); }); return b; };
+  for (const o of S.static.children) {
+    if (o.isPoints || o.isLine || o.isSprite || o.userData.ground) continue;
+    boxOf(o); if (b.isEmpty()) continue; b.getSize(sz); b.getCenter(c);
+    if (sz.x > 9 || sz.z > 9 || sz.y < .12 || c.y < 0) continue;
+    items.push({ o, box: b.clone(), vol: Math.max(1e-6, sz.x * sz.y * sz.z), name: `${o.name || o.type}@(${c.x.toFixed(1)},${c.z.toFixed(1)}) ${sz.x.toFixed(1)}x${sz.y.toFixed(1)}x${sz.z.toFixed(1)}` });
+  }
+  const out = []; const ib = new THREE.Box3(), is = new THREE.Vector3();
+  for (let i = 0; i < items.length; i++) for (let j = i + 1; j < items.length; j++) {
+    const A = items[i], B = items[j]; if (!A.box.intersectsBox(B.box)) continue;
+    ib.copy(A.box).intersect(B.box); ib.getSize(is); const v = is.x * is.y * is.z; const r = v / Math.min(A.vol, B.vol);
+    const small = Math.min(A.vol, B.vol); if ((r > .35 && small > .02) || (r > .2 && v > .05)) out.push({ r: +r.toFixed(2), a: A.name, b: B.name });
+  }
+  out.sort((x, y) => y.r - x.r); return out;
+}
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { OutlineEffect } from 'three/addons/effects/OutlineEffect.js';
 import { Crowd, uTime } from './people.js';
@@ -32,6 +50,7 @@ function build(i) {
   S.crowd = new Crowd(S.group, d.crowdCap || 48);
   S.group.visible = false; scene.add(S.group);
   d.build(S);
+  if (DBG) S.overlaps = overlapReport(S);
   S.verts = bake(S.static, S.group);
   S.crowd.update(0, 0);
   e.built = S; return S;
@@ -109,5 +128,7 @@ window.__dio = {
   hold: (v) => { camHold = v; halted = v; }, go, apply: (i) => applyScene(i), setFree, setPaused, get cur() { return cur; }, SC,
   shot: (i, t, wt = 12) => { applyScene(i); const S = SC[i].built; worldT = wt; uTime.value = wt; for (let k = 0; k < 3; k++) { for (const u of S.updates) u(wt + k * .016, .016); S.crowd.update(wt + k * .016, .016); } placeCam(S, t); effect.render(scene, camera); },
   cam: (pos, tgt) => { camera.position.set(...pos); camera.lookAt(...tgt); effect.render(scene, camera); },
+  overlaps: (i) => (SC[i ?? cur].built || build(i)).overlaps,
+  soak: (sec) => { const S = SC[cur].built; const n = Math.round(sec / .05); for (let k = 0; k < n; k++) { worldT += .05; uTime.value = worldT; for (const u of S.updates) u(worldT, .05); S.crowd.update(worldT, .05); } const ag = S.crowd.agents; let stuck = 0, minD = 9; for (let i = 0; i < ag.length; i++) { const a = ag[i]; if (a.path && !a.attach && a.vel < .05 && a.path.wait <= 0 && !a.path.until) stuck++; for (let j = i + 1; j < ag.length; j++) { const b = ag[j]; if (a.attach || b.attach || Math.abs(a.pos.y - b.pos.y) > .5) continue; const d = Math.hypot(a.fx - b.fx, a.fz - b.fz); if (d < minD) minD = d; } } return { agents: ag.length, stuck, minD: +minD.toFixed(2) }; },
   stats: () => { const S = SC[cur].built; let meshes = 0; S.group.traverse((o) => { if (o.isMesh) meshes++; }); return { meshes, verts: S.verts, calls: renderer.info.render.calls, tris: renderer.info.render.triangles }; },
 };

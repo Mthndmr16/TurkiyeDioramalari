@@ -1,7 +1,7 @@
 import { THREE, TAU, R, rr, ri, pick, chance, lerp, ease, smooth, clamp, V, M, E, N, EN, noOL, box, cyl, rod, blob, ell, dome, cone, hipRoof, ridgeRoof, gable, archTop, archWin, line, sag, group, sign, texMat, tileTex, decal, glow, ctex, UB, PLANE, mesh, cg, gradMap } from '../kit.js';
 import { apt, win, tree, bush, flowers, grass, bench, seatsOf, lamp, bin, bollard, kiosk, teaSet, crate, fence, trafficLight, planter, cat, dog, curb, crosswalk, dashes, shade, umbrella, hedge } from '../props.js';
-import { flag, gulls, pigeons, car, traffic, water, petals, smoke, sunLight, base } from '../dyn.js';
-import { MODE, lane } from '../people.js';
+import { flag, gulls, pigeons, car, Lane, signal, water, petals, smoke, sunLight, base } from '../dyn.js';
+import { MODE, lane, chat } from '../people.js';
 
 const STN = '#dccb9f', LEAD = '#8a929c', BRICK = '#b5603f', HANST = '#d8c8a8';
 
@@ -71,7 +71,8 @@ function kozaHan(st, S, x, z) {
   for (const [tx, tz] of [[-2.2, -1.3], [2.2, -1.3], [-2.2, 1.3], [2.2, 1.3]]) tree(g, tx, tz, .62, 'linden', { cols: ['#c9b83a', '#a8b040', '#d9c04a', '#8fa83a'] });
   const seats = [];
   for (const [cx2, cz2] of [[-1.35, -1.2], [1.35, 1.2], [-1.35, 1.2]]) seats.push(...teaSet(g, cx2, cz2, { n: 3, a0: rr(0, 2), stool: '#3a2e28', top: '#e8e2d6' }));
-  for (const s of seats) if (chance(.8)) C.add({ ...s, mode: MODE.sit });
+  for (const s of seats) if (chance(.8)) C.add({ ...s, mode: pick([MODE.sit, MODE.talk, MODE.sitPhone]) });
+  C.add({ v: 'w', speed: .45, path: { pts: [V(x - 2.6, .01, z + 2.1), V(x - 1.4, .01, z + .4), V(x + 1.4, .01, z + .4), V(x + 2.6, .01, z + 2.1)], mode: MODE.carry, offset: R(), waits: { 1: { t: [2, 4], mode: MODE.browse, face: Math.PI }, 2: { t: [2, 4], mode: MODE.browse, face: Math.PI } } } });
   // silk scarves hanging in the ground arcades
   const scarf = ['#d6304a', '#2a9d8f', '#f2c230', '#7a3fa0', '#e98bb0', '#3a86c8', '#f08a3c', '#ffffff', '#1f4f7a'];
   for (const s of [-1, 1]) for (let i = 0; i < 7; i++) { const px = -cw / 2 + .45 + i * (cw - .9) / 6; box(g, .7, .02, .02, '#666', px, 1.15, s * (cd / 2 - .06)); for (let k = 0; k < 4; k++) box(g, .13, .45, .015, N(pick(scarf)), px - .24 + k * .16, .68, s * (cd / 2 - .07)).castShadow = false; }
@@ -129,8 +130,9 @@ export default {
     for (const [tx, tz, ry] of [[0, 8.25, Math.PI], [2, 10.75, 0]]) trafficLight(st, tx, tz, ry);
     for (const lx of [-12, -6, 6, 12]) lamp(st, lx, 10.85, { h: 2.6 });
     for (const tx of [-14, -9, -3.4, 4, 9, 14]) tree(st, tx, 11.9, .85, 'autumn', { pit: true });
-    const vs = [car(g, { type: 'taxi', c: '#f2c230' }), car(g, { type: 'sedan', c: '#2a5a9a' }), car(g, { type: 'dolmus', c: '#f2c230' }), car(g, { type: 'sedan', c: '#eeeeea' }), car(g, { type: 'van', c: '#c63b3b' }), car(g, { type: 'sedan', c: '#3a3a3e' })];
-    vs.forEach((v, i) => traffic(S, v, { z: i % 2 ? 9.0 : 10.0, speed: 2.4, off: i * 4.7, dir: i % 2 ? 1 : -1, fade: 1.2 }));
+    const SIG = signal(26, 16, 7);
+    new Lane(S, { z: 9.0, x0: -14, x1: 14, dir: 1, speed: 2.4, fade: 1.2, stops: [{ x: -.3, red: (t) => !SIG.carGo(t) }] }).fill([car(g, { type: 'taxi', c: '#f2c230' }), car(g, { type: 'dolmus', c: '#f2c230' }), car(g, { type: 'van', c: '#c63b3b' })]);
+    new Lane(S, { z: 10.0, x0: -14, x1: 14, dir: -1, speed: 2.3, fade: 1.2, stops: [{ x: 2.3, red: (t) => !SIG.carGo(t) }] }).fill([car(g, { type: 'sedan', c: '#2a5a9a' }), car(g, { type: 'sedan', c: '#eeeeea' }), car(g, { type: 'bus', c: '#f4f4f0' }), car(g, { type: 'sedan', c: '#3a3a3e' })]);
     // ---- Ulu Cami (left) + Koza Han (right)
     const UC = uluCami(st, S, -9.1, -6.6);
     kozaHan(st, S, 8.2, -7.2);
@@ -140,12 +142,12 @@ export default {
     apt(st, { x: -1.4, z: -10.0, w: 3.2, d: 3.4, floors: 3, color: '#efe4cf', trim: '#7a4a2a', roof: 'hip', roofC: '#b5563c', cumba: true, sides: 1, frame: '#7a4a2a', shutters: null, shop: { text: 'İSKENDER', type: 'kebab', style: { bg: '#7a1e1e', fg: '#f6e3b4', serif: true }, awning: ['#7a1e1e', '#f4efe4'] } });
     apt(st, { x: 1.8, z: -10.4, w: 2.4, d: 2.8, floors: 2, color: '#d9a066', trim: '#f3ead9', roof: 'hip', roofC: '#b5563c', sides: 1, shop: { text: 'KESTANE ŞEKERİ', type: 'sweets', style: { bg: '#5a2a12', fg: '#f2c46d' }, awning: ['#5a2a12', '#f4efe4'] } });
     const dine = []; for (const dx of [-2.4, -.4]) dine.push(...teaSet(st, dx, -6.9, { n: 2, a0: 0, top: '#f4efe4', stool: '#7a4a2a', umbrella: '#7a1e1e' }));
-    for (const s of dine) if (chance(.85)) C.add({ ...s, mode: MODE.sit });
+    for (const s of dine) if (chance(.85)) C.add({ ...s, mode: pick([MODE.sit, MODE.talk]) });
     // great plane tree + karagöz
     tree(st, 0.4, -3.6, 1.55, 'autumn', { pit: true });
-    karagoz(st, S, -1.6, -5.8, .25);
-    for (let i = 0; i < 6; i++) C.add({ x: -2.2 + (i % 3) * .5 + rr(-.08, .08), z: -4.9 + Math.floor(i / 3) * .5, ry: Math.PI + .25, mode: MODE.sit, y: .01, scale: rr(.68, .76), v: pick(['k', 'm', 'f', 's']) });
-    C.add({ x: -3.0, z: -4.6, ry: Math.PI + .5, mode: MODE.idle, v: 'h' }); C.add({ x: -.4, z: -4.4, ry: Math.PI, mode: MODE.idle, v: 'c', old: true });
+    karagoz(st, S, -2.6, -5.5, .25);
+    for (let i = 0; i < 6; i++) C.add({ x: -2.9 + (i % 3) * .5 + rr(-.08, .08), z: -4.55 + Math.floor(i / 3) * .5, ry: Math.PI + .25, mode: MODE.sit, y: .01, scale: rr(.68, .76), v: 'k' });
+    C.add({ x: -4.1, z: -3.8, ry: Math.PI + .5, mode: MODE.idle, v: 'h' }); C.add({ x: -1.1, z: -3.7, ry: Math.PI, mode: MODE.clap, v: 'c', old: true }); chat(C, 2.6, -1.6, 3); chat(C, -11.6, 4.2, 2, 0, { old: true });
     // ---- Koza Parkı: long pool with jets, benches, flower beds
     box(st, 12, .26, 2.4, '#cfc6b4', 0, 0, 3.2); box(st, 11.6, .02, 2.0, N('#5aa7c9'), 0, .22, 3.2).castShadow = false;
     water(S, g, 11.5, 1.9, 0, .23, 3.2, '#5fb6d6', .25);
@@ -153,24 +155,25 @@ export default {
     S.updates.push((t) => { for (const j of jets) { const h = 1.1 + Math.sin(t * .8 + j.ph) * .4; for (let k = 0; k < j.n; k++) { const u = ((t * .9 + k / j.n) % 1); const a = k * 2.4; const r = u * .35; j.pos[k * 3] = j.jx + Math.cos(a) * r; j.pos[k * 3 + 1] = .25 + h * 4 * u * (1 - u); j.pos[k * 3 + 2] = 3.2 + Math.sin(a) * r; } j.geo.attributes.position.needsUpdate = true; } });
     for (const [fx, fz] of [[-9.5, 3.2], [9.5, 3.2]]) { box(st, 4.4, .25, 2.2, '#bfb5a2', fx, 0, fz); flowers(st, fx, fz, 4.0, 1.8, ['#f2c230', '#e85a3a', '#d6304a', '#f6f0e6', '#c96a2a'], 120, .25); }
     const bs = []; for (const bx of [-5, -2.5, 2.5, 5]) { bs.push(bench(st, bx, 5.3, Math.PI)); bs.push(bench(st, bx, 1.1, 0)); }
-    for (const b of bs) for (const s of seatsOf(b, 2)) if (chance(.55)) C.add({ ...s, mode: MODE.sit });
+    for (const b of bs) for (const s of seatsOf(b, 2)) if (chance(.55)) C.add({ ...s, mode: pick([MODE.sit, MODE.sitPhone, MODE.sitRelax, MODE.talk]) });
     for (const [tx, tz] of [[-7.2, 1.0], [7.2, 1.0], [-7.2, 5.6], [7.2, 5.6], [-12.6, 6.6], [12.6, 6.6], [-3.6, -1.3], [5.4, -1.4]]) tree(st, tx, tz, rr(.9, 1.1), 'autumn', { pit: true });
-    for (const lx of [-6, 0, 6]) { lamp(st, lx, .4, { h: 2.6, arms: 2 }); lamp(st, lx, 6.0, { h: 2.6, arms: 2 }); }
+    for (const lx of [-4.8, 0, 4.8]) { lamp(st, lx, .4, { h: 2.6, arms: 2 }); lamp(st, lx, 6.0, { h: 2.6, arms: 2 }); }
     for (const bx of [-8.4, 8.4]) bin(st, bx, 4.6);
     // kestane cart + smoke, simit cart
     { const kc = group(st, -4.0, 0, 6.6, .2); box(kc, .9, .45, .55, '#2f2f33', 0, .25, 0); for (const s of [-.3, .3]) { const w = cyl(kc, .16, .16, .05, '#222', s, 0, .3, 10); w.rotation.x = Math.PI / 2; w.position.y = .16; } cyl(kc, .3, .3, .06, '#555', -.15, .7, 0, 14); for (let i = 0; i < 16; i++) blob(kc, .035, '#6a3a1a', -.15 + rr(-.22, .22), .78, rr(-.22, .22), true); box(kc, .3, .2, .3, '#c9a06a', .25, .7, 0); sign(kc, 'KESTANE', .6, .14, { bg: '#f2c46d', fg: '#3a1a0a' }, 0, .55, .28, 0, false, null); }
     { const sm = smoke(S, g, null, 8, '#cfc8c0'); const wp = V(-4.15, 1.0, 6.65); S.updates.push((t, dt) => sm(dt, wp, .5, t)); }
-    C.add({ x: -4.05, z: 6.1, ry: .2, mode: MODE.idle, v: 'c', old: true });
+    C.add({ x: -4.05, z: 6.1, ry: .2, mode: MODE.vendor, v: 'g' });
     { const sc = group(st, 4.6, 0, 6.6, -.3); box(sc, .8, .4, .5, '#c3272e', 0, .26, 0); box(sc, .76, .4, .46, noOL(new THREE.MeshToonMaterial({ color: '#d8eef5', transparent: true, opacity: .4 })), 0, .66, 0).userData.keep = true; box(sc, .8, .04, .5, '#c3272e', 0, 1.06, 0); const tor = new THREE.TorusGeometry(.08, .032, 6, 12); for (let i = 0; i < 9; i++) { const s = mesh(tor, '#b8742e', sc, -.26 + (i % 3) * .26, .7 + Math.floor(i / 3) * .11, (i % 2) * .05 - .02); s.rotation.x = Math.PI / 2 - .3; s.castShadow = false; } sign(sc, 'SİMİT', .56, .15, { bg: '#fff3d6', fg: '#c3272e' }, 0, 1.25, 0, 0, false, '#c3272e'); }
-    C.add({ x: 4.7, z: 6.1, ry: -.3, mode: MODE.idle, v: 'm' });
+    C.add({ x: 4.7, z: 6.1, ry: -.3, mode: MODE.vendor, v: 'c' });
     // pigeons & feeders in front of Ulu Cami
     pigeons(S, g, 26, -9, -6.6, 6, 1.8, 7, 24, 0, -9, 1.4);
     for (const [px, pz] of [[-10.2, 1.6], [-8.0, 2.0], [-9.0, .8]]) C.add({ x: px, z: pz, ry: Math.PI + rr(-.4, .4), mode: MODE.wave });
+    for (let i = 0; i < 2; i++) { const pts = []; for (let k = 0; k < 8; k++) { const a = k / 8 * TAU + i * 2.5; pts.push(V(-9 + Math.cos(a) * 1.6, 0, 1.4 + Math.sin(a) * 1.1)); } C.add({ v: 'k', path: { pts, loop: true, mode: MODE.run, offset: R(), start: i * 3 }, speed: .9 }); }
     // walkers
     const W = (pts, n, o = {}) => { for (let i = 0; i < n; i++) C.add({ path: { pts: lane(pts, rr(-.3, .3)), offset: R(), start: ri(0, Math.max(0, pts.length - 2)), waits: o.waits }, v: o.v }); };
     W([V(-14, 0, 7.4), V(14, 0, 7.4)], 5); W([V(-14, 0, 11.4), V(14, 0, 11.4)], 4);
     W([V(-7.4, 0, -.1), V(7.2, 0, -.1)], 3);
-    W([V(8.2, 0, -2.4), V(6.6, 0, -.4), V(6.6, 0, 6.8), V(1.0, 0, 7.4), V(1.0, 0, 11.2)], 4);
+    W([V(8.2, 0, -2.4), V(6.6, 0, -.4), V(6.6, 0, 6.8), V(1.0, 0, 7.6), V(1.0, 0, 8.3), V(1.0, 0, 10.7), V(1.0, 0, 11.4)], 4, { waits: { 4: { t: [0, .5], until: SIG.pedGo }, 5: { t: [0, .5], until: SIG.pedGo } } });
     W([V(-9.1, 0, 1.2), V(-4.0, 0, .9), V(-.8, 0, -1.6), V(1.9, 0, -2.8), V(1.9, 0, -7.4)], 3, { waits: { 4: { t: [2, 4], mode: MODE.browse, face: Math.PI } } });
     W([V(-14, 0, -.2), V(-14, 0, 7.2)], 1);
     // teleferik: base station at the back-right corner, cabins climbing towards Uludağ

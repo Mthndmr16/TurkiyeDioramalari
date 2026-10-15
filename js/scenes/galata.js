@@ -1,7 +1,7 @@
 import { THREE, TAU, R, rr, ri, pick, chance, lerp, ease, smooth, V, M, E, N, EN, noOL, box, cyl, rod, blob, ell, dome, cone, hipRoof, ridgeRoof, gable, archTop, archWin, line, sag, group, sign, texMat, tileTex, decal, glow, ctex, UB, PLANE, mesh, cg } from '../kit.js';
 import { apt, win, tree, cypress, bush, flowers, grass, bench, seatsOf, lamp, bin, bollard, mailbox, bicycle, kiosk, teaSet, crate, fence, streetSign, trafficLight, planter, cat, dog, crosswalk, shade, umbrella } from '../props.js';
 import { flag, bunting, gulls, pigeons, car, traffic, tram, cloud, sunLight, base } from '../dyn.js';
-import { MODE, lane } from '../people.js';
+import { MODE, lane, chat } from '../people.js';
 
 // street rises from the tower square (z=-6, y=0) to Tünel (z=9, y=1.6)
 const Z0 = -6, Z1 = 9, TOP = 1.6, TH = Math.atan2(TOP, Z1 - Z0);
@@ -93,24 +93,26 @@ export default {
     // ticket kiosk + queue railing
     box(st, .9, 1.0, .6, '#5a3b25', 3.9, 0, -7.9); box(st, 1.0, .06, .7, '#3a2414', 3.9, 1.0, -7.9); sign(st, 'GİŞE', .6, .16, { bg: '#f2c46d', fg: '#3a2414' }, 3.9, .8, -7.59, 0, false, null);
     for (const xx of [2.3, 3.3]) fence(st, V(xx, 0, -7.4), V(xx, 0, -5.9), { h: .45, c: '#6a5a48', step: .5 });
-    for (let i = 0; i < 4; i++) C.add({ x: 2.8 + rr(-.08, .08), z: -7.1 + i * .42, ry: Math.PI + .3, mode: chance(.3) ? MODE.photo : MODE.idle });
+    for (let i = 0; i < 4; i++) C.add({ x: 2.8 + rr(-.08, .08), z: -7.1 + i * .45, ry: Math.PI + .3, mode: pick([MODE.photo, MODE.idle, MODE.standPhone, MODE.talk]) });
     // square furniture: cafés with umbrellas, trees, benches
     const seats = [];
-    for (const [cx, cz, uc] of [[-6, -8, '#b8202b'], [-7.6, -9.6, '#f4efe4'], [-6.2, -11.4, '#b8202b'], [6.2, -7.6, '#2f5a3a'], [7.8, -9.4, '#f4efe4'], [6.4, -11.2, '#2f5a3a']]) seats.push(...teaSet(st, cx, cz, { n: 3, umbrella: uc, top: '#e8e2d6', stool: '#3a2e28', a0: rr(0, 2) }));
-    for (const [tx, tz] of [[-4.2, -11.9], [4.4, -12.0], [-8.0, -6.6], [8.0, -6.6], [-8.0, -12.1], [8.1, -12.1]]) tree(st, tx, tz, rr(.85, 1.0), 'plane', { pit: true });
-    const bs = [bench(st, -3.3, -7.3, Math.PI / 2 + .5), bench(st, -2.9, -12.2, .5), bench(st, 2.8, -12.2, -.5)];
+    for (const [cx, cz, uc] of [[-6, -8, '#b8202b'], [-7.4, -9.7, '#f4efe4'], [-6.0, -11.4, '#b8202b'], [6.2, -7.6, '#2f5a3a'], [7.4, -9.5, '#f4efe4'], [6.2, -11.2, '#2f5a3a']]) seats.push(...teaSet(st, cx, cz, { n: 3, umbrella: uc, top: '#e8e2d6', stool: '#3a2e28', a0: rr(0, 2) }));
+    for (const [tx, tz] of [[-4.2, -11.9], [4.4, -12.0], [-7.6, -6.6], [7.6, -6.6], [-7.7, -12.1], [7.7, -12.1]]) tree(st, tx, tz, rr(.85, 1.0), 'plane', { pit: true });
+    const bs = [bench(st, -3.3, -7.3, Math.PI / 2 + .5), bench(st, -2.9, -11.8, .5), bench(st, 2.8, -11.8, -.5)];
     for (const b of bs) for (const s of seatsOf(b, 2)) if (chance(.7)) seats.push(s);
-    for (const s of seats) C.add({ ...s, mode: MODE.sit });
+    for (const s of seats) C.add({ ...s, mode: pick([MODE.sit, MODE.sit, MODE.sitPhone, MODE.sitRelax]) });
     lamp(st, -3.7, -9.4, { h: 2.6 }); lamp(st, 3.7, -9.4, { h: 2.6 });
     // street musician
     C.add({ x: -2.6, z: -6.5, ry: .6, mode: MODE.browse, v: 'c', look: { top: '#2a2a2a', acc: '#2a2a2a' } });
+    C.add({ x: -5.1, z: -9.3, ry: 1.0, mode: MODE.selfie, v: 'f' }); C.add({ x: -5.45, z: -9.45, ry: .8, mode: MODE.idle, v: 'm' });
+    chat(C, 3.0, -9.6, 3); chat(C, -1.2, -12.6, 2, 0, { old: true });
     { const gt = group(st, -2.6, 0, -6.5, .6); ell(gt, .1, .14, .04, '#c9772e', .02, .3, .18); box(gt, .03, .3, .02, '#3a2414', .14, .45, .18).rotation.z = -.9; cyl(st, .1, .12, .08, '#3a2a20', -2.3, 0, -6.1, 10); }
-    for (const [px, pz] of [[-2.0, -5.7], [-2.6, -5.5], [-3.3, -5.8]]) C.add({ x: px, z: pz, ry: Math.PI + rr(-.3, .3), mode: MODE.idle });
+    for (const [px, pz] of [[-2.0, -5.6], [-2.6, -5.4], [-3.3, -5.7], [-1.5, -5.9]]) C.add({ x: px, z: pz, ry: Math.PI + rr(-.3, .3), mode: chance(.7) ? MODE.clap : MODE.idle });
     // photographers facing the tower
     for (const [px, pz] of [[1.3, -6.7], [-1.4, -6.9], [4.9, -5.9], [-5.0, -6.4]]) C.add({ x: px, z: pz, ry: Math.atan2(0 - px, -10.0 - pz), mode: MODE.photo });
     // juice & simit carts
-    { const jc = group(st, 4.3, 0, -11.9, -.3); box(jc, .9, .45, .5, '#2a6fb0', 0, .2, 0); for (let i = 0; i < 12; i++) blob(jc, .06, pick(['#f08a2c', '#c9302c', '#7a1a3a']), -.33 + (i % 6) * .13, .7, -.08 + Math.floor(i / 6) * .14, true); cyl(jc, .02, .02, 1.0, '#ddd', 0, .65, 0, 5); cone(jc, .55, .22, '#f2c230', 0, 1.6, 0, 10); sign(jc, 'NAR · PORTAKAL', .8, .14, { bg: '#fff', fg: '#c9302c' }, 0, .55, .26, 0, false, null); }
-    C.add({ x: 4.45, z: -12.4, ry: -.3, mode: MODE.idle, v: 'm' });
+    { const jc = group(st, 5.9, 0, -12.2, -.3); box(jc, .9, .45, .5, '#2a6fb0', 0, .2, 0); for (let i = 0; i < 12; i++) blob(jc, .06, pick(['#f08a2c', '#c9302c', '#7a1a3a']), -.33 + (i % 6) * .13, .7, -.08 + Math.floor(i / 6) * .14, true); cyl(jc, .02, .02, 1.0, '#ddd', 0, .65, 0, 5); cone(jc, .55, .22, '#f2c230', 0, 1.6, 0, 10); sign(jc, 'NAR · PORTAKAL', .8, .14, { bg: '#fff', fg: '#c9302c' }, 0, .55, .26, 0, false, null); }
+    C.add({ x: 6.05, z: -12.7, ry: -.3, mode: MODE.vendor, v: 'm' });
     // backdrop buildings behind the tower (face +z)
     const backC = ['#d9c7a6', '#b56a52', '#e3d3b0', '#9aa7a0', '#c9a27e', '#e6cfc0'];
     let bx = -12;
@@ -129,7 +131,7 @@ export default {
         const w = ws[i], zc = zz - w / 2, hi = hY(zz), lo = hY(zz - w);
         const shop = (side < 0 ? shopsL : shopsR)[i];
         apt(st, { x: side * 4.35, y: hi, z: zc, w: w - .04, d: 4.5, floors: ri(4, 5), sides: 1, color: facC[(i * 2 + (side > 0 ? 1 : 0)) % facC.length], ry: -side * Math.PI / 2, ornate: true, plinth: hi - lo + .3, stone: pick(['#b8ab94', '#a89c86', '#c2b59c']), roof: chance(.75) ? 'hip' : 'flat', roofC: pick(['#a8573e', '#b5634a', '#9c4a36', '#7d8792']), balc: .45, cumba: chance(.35), shutters: chance(.4) ? pick(['#3f6b55', '#6b4a3a', '#5a6a7a']) : null, shop, back: true });
-        if (shop.type === 'music') { const fx = side * 1.98; instrumentRack(st, fx, hi, zc - w * .3, -side * Math.PI / 2); shopFronts.push({ x: side * 2.4, z: zc + .2, face: side < 0 ? -Math.PI / 2 : Math.PI / 2 }); }
+        if (shop.type === 'music') { const fx = side * 1.88; instrumentRack(st, fx, hi, zc - w * .3, -side * Math.PI / 2); shopFronts.push({ x: side * 2.4, z: zc + .2, face: side < 0 ? -Math.PI / 2 : Math.PI / 2 }); }
         zz -= w;
       }
     }
@@ -146,6 +148,7 @@ export default {
     for (const [a, b] of [[V(-2.15, hY(8) + 5.4, 8), V(2.15, hY(6) + 5.0, 6)], [V(-2.15, hY(1) + 5.6, 1), V(2.15, hY(-1) + 5.3, -1)], [V(-2.15, hY(-4) + 5.2, -4), V(2.15, hY(-3) + 5.0, -3)]]) line(g, sag(a, b, .4), '#202020');
     // tea tables on the street outside the çay ocağı (left, 3rd building)
     const tz = 5.6 - L_W[0] - L_W[1] - L_W[2] / 2; for (const dz of [-.55, .55]) { const ss = teaSet(st, -1.3, tz + dz, { y: hY(tz + dz) + .02, n: 2, a0: Math.PI / 2, stool: '#b8342c' }); for (const s of ss) if (chance(.8)) C.add({ ...s, mode: MODE.sit }); }
+    C.add({ v: 'w', speed: .5, path: { pts: [V(-1.75, hY(tz + 1.2) + .02, tz + 1.2), V(-1.75, hY(tz - .9) + .02, tz - .9)], mode: MODE.carry, waits: { 0: { t: [2, 4], mode: MODE.browse, face: -Math.PI / 2 }, 1: { t: [2, 4], mode: MODE.browse, face: Math.PI / 2 } } } });
     // street lamps (wall-mounted)
     for (const zz2 of [7, 3, -1, -4.5]) for (const s of [-1, 1]) { const yy = hY(zz2) + 2.6; box(st, .5, .04, .04, '#23302a', s * 1.95, yy, zz2 + s * .3); box(st, .14, .22, .14, N('#f5ecd2'), s * 1.75, yy - .25, zz2 + s * .3); cone(st, .13, .1, '#23302a', s * 1.75, yy - .04, zz2 + s * .3, 4); }
     // ---- Tünel square: tram + station
@@ -173,9 +176,9 @@ export default {
     for (let i = 0; i < 5; i++) { const r = rr(3.3, 4.4); const pts = []; for (let k = 0; k <= 10; k++) { const a = (-105 + k * 21) * Math.PI / 180; pts.push(V(Math.sin(a) * r, .02, -10.0 + Math.cos(a) * r)); } C.add({ path: { pts, offset: R(), start: ri(0, 8) } }); }
     // Tünel square walkers
     for (let i = 0; i < 4; i++) C.add({ path: { pts: [V(-9.5, TOP + .02, 10.7 + rr(-.25, .3)), V(9.5, TOP + .02, 10.7 + rr(-.25, .3))], offset: R() } });
-    C.add({ x: -6, y: TOP, z: 11.15, ry: 0, mode: MODE.idle }); C.add({ x: -5.3, y: TOP, z: 11.1, ry: -.4, mode: MODE.idle, v: 'k' });
+    C.add({ x: -6, y: TOP, z: 11.15, ry: 0, mode: MODE.standPhone }); C.add({ x: -5.3, y: TOP, z: 11.1, ry: -.4, mode: MODE.idle, v: 'k' }); chat(C, 1.0, 10.2, 2, TOP);
     // animals, birds, clouds
-    cat(S, st, -1.4, -7.2, .6, '#d98a3d'); cat(S, st, 1.3, -13.6, 2, '#2b2b2b', true); cat(S, st, -1.95, hY(1.2) + .1, 1.2, '#f2efe8', true); cat(S, st, 2.0, hY(6.2) + .1, -1.6, '#9c9c9c', true); dog(S, st, -8.6, -12.6, .9, '#c9a77a', true);
+    cat(S, st, -1.4, -7.2, .6, '#d98a3d'); cat(S, st, 1.3, -12.4, 2, '#2b2b2b', true); cat(S, st, -1.9, 1.2, 1.2, '#f2efe8', true, hY(1.2)); cat(S, st, 1.95, 6.2, -1.6, '#9c9c9c', true, hY(6.2)); dog(S, st, -6.2, -12.4, .9, '#c9a77a', true);
     pigeons(S, g, 22, 0, -10.0, 4.4, 1.6, 9, 20, 0, 0, -5.4);
     gulls(S, g, 6, 0, 14, -10.0, 3.5, 7);
     const cls = [[-16, 19, -24, 1.6], [12, 21, -28, 2.0], [-26, 16, -8, 1.4], [26, 18, -4, 1.7], [4, 24, -38, 2.4], [-30, 22, -34, 1.9]].map(([x, y, z, s]) => ({ c: cloud(g, x, y, z, s), x }));

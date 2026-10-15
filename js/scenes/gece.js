@@ -1,7 +1,7 @@
 import { THREE, TAU, R, rr, ri, pick, chance, lerp, ease, smooth, V, M, E, N, EN, noOL, box, cyl, rod, blob, ell, dome, cone, line, sag, group, sign, texMat, stripeTex, decal, glow, ctex, UB, PLANE, mesh, cg } from '../kit.js';
 import { apt, entrance, win, tree, bench, seatsOf, lamp, bin, bollard, busStop, crate, cat, dog, curb, crosswalk, dashes, shade, streetSign, powerPole, teaSet, interiorTex } from '../props.js';
-import { car, traffic, rain, sunLight, base } from '../dyn.js';
-import { MODE, lane } from '../people.js';
+import { car, Lane, signal, rain, sunLight, base } from '../dyn.js';
+import { MODE, lane, chat } from '../people.js';
 
 export default {
   id: 'gece', seed: 22, chip: 'Yağmurlu gece', title: 'Kiraz Sokak', crowdCap: 36,
@@ -55,7 +55,7 @@ export default {
     for (const [lx, lz] of [[4.6, -.85], [-6.6, -.85]]) {
       lamp(st, lx, lz, { style: 'sodium', h: 3.8, night: true, y: .14 });
       const cn = new THREE.Mesh(new THREE.ConeGeometry(1.5, 3.6, 20, 1, true), noOL(new THREE.MeshBasicMaterial({ color: '#ffb35a', transparent: true, opacity: .07, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide })));
-      cn.position.set(lx, 1.95, lz + 1.05); g.add(cn);
+      cn.position.set(lx, 1.95, lz + 1.05); cn.userData.ground = true; g.add(cn);
       const L = new THREE.PointLight('#ffa54f', 13, 10, 1.5); L.position.set(lx, 3.5, lz + 1.05); g.add(L);
     }
     // puddles with warm reflections + ripples
@@ -69,10 +69,12 @@ export default {
     // parked cars + courier scooter
     const p1 = car(st, { type: 'sedan', c: '#eeeeea' }); p1.position.set(-7.2, .03, .25);
     const p2 = car(st, { type: 'sedan', c: '#7a1e1e' }); p2.position.set(8.0, .03, .25); p2.rotation.y = Math.PI;
-    const mc = car(g, { type: 'taxi', c: '#f2c230', night: true }); traffic(S, mc, { z: 2.6, x0: -11, x1: 11, speed: 4.5, off: 2, dir: 1, fade: 1.2, gap: 7 });
+    const SIG = signal(26, 17, 6);
+    const mc = car(g, { type: 'taxi', c: '#f2c230', night: true }), mc2 = car(g, { type: 'sedan', c: '#3a3a44', night: true });
+    new Lane(S, { z: 2.6, x0: -11, x1: 11, dir: 1, speed: 3.6, fade: 1.2, stops: [{ x: -2.5, red: (t) => !SIG.carGo(t) }] }).fill([mc, mc2]);
     const hl = new THREE.PointLight('#fff2d0', 0, 9, 1.4); g.add(hl); S.updates.push(() => { hl.position.set(mc.position.x + 1.6, .6, mc.position.z); hl.intensity = mc.visible ? 9 * mc.scale.x : 0; });
     const sc = group(g); { box(sc, .8, .26, .28, '#c73636', 0, .14, 0); box(sc, .4, .36, .42, '#c73636', -.28, .42, 0); sign(sc, 'KURYE', .36, .1, { bg: '#c73636', fg: '#fff' }, -.28, .68, .215, 0, false, null); for (const sx of [-.32, .32]) { const w = cyl(sc, .13, .13, .07, '#1a1a1a', sx, 0, 0, 10); w.rotation.x = Math.PI / 2; w.position.y = .13; } rod(sc, V(.34, .2, 0), V(.3, .62, 0), .015, '#333', 4); box(sc, .03, .03, .36, '#333', .3, .62, 0); glow(sc, .45, .4, 0, 1.0, '#fff4d6', .8); }
-    traffic(S, sc, { z: .9, x0: -11, x1: 11, speed: 3.2, off: 6, dir: -1, fade: 1, gap: 4 });
+    sc.userData.L = 1.0; new Lane(S, { z: .9, x0: -11, x1: 11, dir: -1, speed: 3.0, fade: 1, stops: [{ x: .1, red: (t) => !SIG.carGo(t) }] }).add(sc, .2);
     C.add({ attach: sc, x: .02, y: .14, z: 0, ry: Math.PI / 2, mode: MODE.sit, v: 'c', look: { top: '#c73636', acc: '#c73636' } });
     // street sign, poles, wires
     streetSign(st, 3.4, -.85, 'KİRAZ SK.', 'MODA MAH.', 0, .14);
@@ -90,17 +92,20 @@ export default {
     cyl(st, .09, .07, .05, '#3a7bd5', -.35, .14, F + .85, 10); cyl(st, .09, .07, .05, '#d5503a', -.1, .14, F + .9, 10);
     cat(S, st, -2.5, 4.4, 1.0, '#2b2b2b', false, .14); dog(S, st, 6.6, 5.6, 2.0, '#c9a77a', true, .14);
     // ---- people
-    for (const s of dSeats) if (chance(.7)) C.add({ ...s, mode: MODE.sit });
-    C.add({ x: .4, y: .14, z: F + .75, ry: 0, mode: MODE.idle, v: 'c', old: true, look: { top: '#e8e2d6' } });
+    for (const s of dSeats) if (chance(.7)) C.add({ ...s, mode: pick([MODE.sit, MODE.sitPhone, MODE.talk]) });
+    C.add({ x: .4, y: .14, z: F + .75, ry: 0, mode: MODE.vendor, v: 'g', look: { top: '#e8e2d6' } });
     C.add({ x: -.9, y: .14, z: F + .9, ry: Math.PI + .2, mode: MODE.browse, v: 'hb' });
-    C.add({ x: -5.5, y: .14, z: F + .35, ry: 0, mode: MODE.idle, v: 'm', look: { top: '#ffffff' } });
-    C.add({ x: -5.2, y: .17, z: 5.28, ry: Math.PI, mode: MODE.sit }); C.add({ x: -4.3, y: .14, z: 5.05, ry: Math.PI - .4, mode: MODE.idle, v: 'fu' });
-    C.add({ x: 1.4, y: .14, z: 5.9, ry: Math.PI, mode: MODE.idle, v: 'm' }); C.add({ x: 1.05, y: .14, z: 5.0, ry: .3, mode: MODE.browse, v: 'u' });
+    C.add({ x: -5.5, y: .14, z: F + .35, ry: 0, mode: MODE.vendor, v: 'w', look: { top: '#ffffff' } });
+    C.add({ x: -5.2, y: .17, z: 5.28, ry: Math.PI, mode: MODE.sitPhone }); C.add({ x: -4.3, y: .14, z: 5.05, ry: Math.PI - .4, mode: MODE.idle, v: 'fu' });
+    C.add({ x: 1.4, y: .14, z: 5.9, ry: Math.PI, mode: MODE.vendor, v: 'c' }); C.add({ x: 1.05, y: .14, z: 5.0, ry: .3, mode: MODE.browse, v: 'u' });
     C.add({ x: 6.2, y: .14, z: -2.05, ry: -.6, mode: MODE.wave, v: 'c' }); C.add({ x: 6.75, y: .14, z: -2.25, ry: Math.PI - .8, mode: MODE.idle, v: 'm', old: true });
     const um = (pts, v, n = 1) => { for (let i = 0; i < n; i++) C.add({ v, path: { pts: lane(pts, rr(-.2, .2)), offset: R() }, speed: rr(.5, .7) }); };
     um([V(-11.5, .14, -1.2), V(11.5, .14, -1.2)], 'u', 2); um([V(11.5, .14, -1.2), V(-11.5, .14, -1.2)], 'fu', 1);
     um([V(-9, .14, 4.5), V(9, .14, 4.5)], 'fu', 1); um([V(9, .14, 4.5), V(-9, .14, 4.5)], 'u', 1);
-    um([V(-1.2, .14, -.7), V(-1.2, .03, -.4), V(-1.2, .03, 3.9), V(-1.2, .14, 4.2)], 'u', 1);
+    for (const vv of ['u', 'fu']) C.add({ v: vv, path: { pts: [V(-1.2 + rr(-.3, .3), .14, -1.4), V(-1.2 + rr(-.3, .3), .14, -.7), V(-1.2 + rr(-.3, .3), .03, -.4), V(-1.2 + rr(-.3, .3), .03, 3.9), V(-1.2 + rr(-.3, .3), .14, 4.2), V(-1.2 + rr(-.3, .3), .14, 5.0)], offset: R(), waits: { 1: { t: [0, 1], until: SIG.pedGo }, 4: { t: [0, 1], until: SIG.pedGo } } }, speed: rr(.5, .65) });
+    // late for the bus: someone runs down the pavement with an umbrella
+    C.add({ v: 'u', speed: 1.05, path: { pts: [V(10.5, .14, 4.6), V(-4.0, .14, 4.7)], mode: MODE.run, offset: R(), waits: { 1: { t: [6, 12], mode: MODE.idle, face: Math.PI } } } });
+    chat(C, .6, -1.25, 2, .14, { v: ['u', 'fu', 'm'] });
     rain(S, g, 2000, [12, 16, 9], .26);
     const fl = document.getElementById('flash'); let next = 6;
     S.updates.push((t) => { if (S.lt === undefined) S.lt = -10; if (t > next) { S.lt = t; next = t + rr(9, 16); } const k = t - S.lt; const f = k < .6 ? (k < .08 ? 1 : k < .18 ? .2 : k < .26 ? .8 : Math.max(0, 1 - (k - .26) * 3) * .3) : 0; S.hemi.intensity = .6 + f * 2.5; if (fl) fl.style.opacity = (f * .25).toFixed(3); });
